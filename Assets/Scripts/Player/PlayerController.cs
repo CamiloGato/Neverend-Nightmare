@@ -6,18 +6,11 @@ using Pickable;
 using TimeLoop;
 using Unity.Collections;
 using UnityEngine;
+using Volume;
 
 namespace Player
 {
-    
-    /*
-    <Summary>
-        <Description>
-            This Script is used to control the player's movement.
-        </Description>
-    </Summary>
-    */
-    
+
     [RequireComponent(typeof(Rigidbody))]
     [RequireComponent(typeof(CapsuleCollider))]
     public class PlayerController : MonoBehaviour
@@ -64,14 +57,9 @@ namespace Player
         [SerializeField] private float multiplierPositionClimb = 2f;
         
         [Header("Debug")]
-        [SerializeField] private bool _isGrounded;
-        [SerializeField] private bool _doingAction;
-        [SerializeField] private bool _isClimbing;
-        [SerializeField] private bool _grabObject;
-        [SerializeField] private bool _targetPlayer;
-        [SerializeField] private bool _isJumping;
-        [SerializeField] private bool _isDead;
-        [SerializeField] private int _effectDomineering;
+        [SerializeField] private bool isGrounded;
+        [SerializeField] private bool doingAction;
+        [SerializeField] private bool isJumping;
         
         private List<Rigidbody> _rigidbodies;
         private List<Collider> _rigidbodyCollider;
@@ -129,7 +117,7 @@ namespace Player
         {
             if (collision.gameObject.CompareTag("Ground"))
             {
-                _isGrounded = true;
+                isGrounded = true;
                 CinemachineEffects.Instance.ShakeCamera(jumpIntensityShake, jumpDurationShake);
             }
 
@@ -146,7 +134,7 @@ namespace Player
 
             if (collision.gameObject.CompareTag("Block/Wall"))
             {
-                if (!_isGrounded) _rigidbody.AddForce(-transform.forward.normalized * jumpForce/2, ForceMode.Impulse);
+                if (!isGrounded) _rigidbody.AddForce(-transform.forward.normalized * jumpForce/2, ForceMode.Impulse);
             }
 
         }
@@ -155,7 +143,7 @@ namespace Player
         {
             if (collision.gameObject.CompareTag("Ground"))
             {
-                _isGrounded = false;
+                isGrounded = false;
             }
         }
         
@@ -184,7 +172,7 @@ namespace Player
             targetTransform.Rotate(0, horizontalRotation, 0);
 
             // Move the forward of the body and the camera to the direction of the player and rotate the body.
-            if ( (verticalInput != 0 || horizontalInput != 0) && _isGrounded && !_doingAction)
+            if ( (verticalInput != 0 || horizontalInput != 0) && isGrounded && !doingAction)
             {
                 _rigidbody.velocity = movementDirection * speed;
                 Vector3 forward = targetTransform.forward;
@@ -194,7 +182,7 @@ namespace Player
             }
 
             // Verify if the player get the input (space) to jump
-            if (Input.GetKeyDown(KeyCode.Space) && _isGrounded && !_doingAction)
+            if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !doingAction)
             {
                 StartCoroutine(Jump());
             }
@@ -232,7 +220,7 @@ namespace Player
 
             if (distance >= 0)
             {
-                VolumeController.Instance.ChangeBloom(distance);
+                VolumeController.Instance.volumeEffects.ChangeBloom(distance);
             }
         }
         
@@ -243,7 +231,7 @@ namespace Player
             if (distance >= 0)
             {
                 CinemachineEffects.Instance.ShakeCamera(distance, 3f);
-                VolumeController.Instance.EnemyTheme(distance);
+                VolumeController.Instance.volumeEffects.EnemyTheme(distance);
             }
         }
         
@@ -252,7 +240,7 @@ namespace Player
             
             var startPoint = bodyTransform.position;
             var direction = bodyTransform.forward.normalized;
-            if (Physics.Raycast(startPoint, direction, out var hitClimb, raycastDistance, raycastLayerClimb) && !_doingAction)
+            if (Physics.Raycast(startPoint, direction, out var hitClimb, raycastDistance, raycastLayerClimb) && !doingAction)
             {
                 if (hitClimb.distance < 0.6f)
                 {
@@ -260,20 +248,20 @@ namespace Player
                 }
             }
             
-            if (Physics.Raycast(startPoint, Vector3.down, out var hitFall, float.MaxValue, raycastLayerClimb) && !_doingAction)
+            if (Physics.Raycast(startPoint, Vector3.down, out var hitFall, float.MaxValue, raycastLayerClimb) && !doingAction)
             {
-                if (hitFall.distance > fallFreeDistance && !_doingAction)
+                if (hitFall.distance > fallFreeDistance && !doingAction)
                 {
                     StartCoroutine(FallFree());
                 }
 
-                if (hitFall.distance < groundDistance && !_isJumping )
+                if (hitFall.distance < groundDistance && !isJumping )
                 {
-                    _isGrounded = true;
+                    isGrounded = true;
                 }
-                if (hitFall.distance > groundDistance && !_isJumping)
+                if (hitFall.distance > groundDistance && !isJumping)
                 {
-                    _isGrounded = false;
+                    isGrounded = false;
                 }
                 
             }
@@ -282,34 +270,34 @@ namespace Player
 
         private IEnumerator Jump()
         {
-            _isGrounded = false;
-            _isJumping = true;
+            isGrounded = false;
+            isJumping = true;
             _rigidbody.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            yield return new WaitUntil(() => _isGrounded);
-            _isJumping = false;
+            yield return new WaitUntil(() => isGrounded);
+            isJumping = false;
         }
         
         private IEnumerator FallFree()
         {
-            _doingAction = true;
+            doingAction = true;
             ActivateRagdoll();
-            yield return new WaitUntil(() => _isGrounded);
+            yield return new WaitUntil(() => isGrounded);
             yield return new WaitForSeconds(2f);
             DeactivateRagdoll();
-            _doingAction = false;
+            doingAction = false;
         }
         
         private IEnumerator Wave()
         {
-            _doingAction = true;
+            doingAction = true;
             animator.SetTrigger("Wave");
             yield return new WaitForSeconds(2f);
-            _doingAction = false;
+            doingAction = false;
         }
 
         private IEnumerator Climb(RaycastHit hit)
         {
-            _doingAction = true;
+            doingAction = true;
             _rigidbody.useGravity = false;
             _capsuleCollider.enabled = false;
             
@@ -335,33 +323,25 @@ namespace Player
 
             _capsuleCollider.enabled = true;
             _rigidbody.useGravity = true;
-            _doingAction = false;
+            doingAction = false;
         }
 
         private IEnumerator PickupObject(PickableController obj)
         {
-            _doingAction = true;
+            doingAction = true;
             obj.PickUp();
             animator.SetTrigger("Pickup");
             yield return new WaitForSeconds(1f);
-            _doingAction = false;
+            doingAction = false;
         }
 
         // Control the animator states
         private void AnimatorStates()
         {
-            animator.SetBool("Grounded", _isGrounded);
+            animator.SetBool("Grounded", isGrounded);
             animator.SetFloat("MoveSpeed", _rigidbody.velocity.magnitude);
         }
         
-        /*
-         * <Summary>
-         *    <Description>
-         *       This method is used to activate the ragdoll of the player.
-         *      Note: This method is called in the OnCollisionEnter method.
-         *     Required: Rigidbody, CapsuleCollider, Animator, Ragdoll.
-         *   </Description>
-         */
         private void DeactivateRagdoll()
         {
             foreach (Rigidbody rigidbody in _rigidbodies)
@@ -374,7 +354,7 @@ namespace Player
                 collider1.enabled = false;
             }
             animator.enabled = true;
-            _doingAction = false;
+            doingAction = false;
         }
         
         private void ActivateRagdoll()
@@ -388,9 +368,8 @@ namespace Player
                 collider1.enabled = true;
             }
             animator.enabled = false;
-            _doingAction = true;
+            doingAction = true;
         }
-        
 
         private void PlayerDieEffects()
         {
@@ -404,17 +383,17 @@ namespace Player
         
         private IEnumerator PlayerChangePosition(Vector3 newPosition)
         {
-            _doingAction = true;
+            doingAction = true;
             Vector2 vignettePosition = new Vector2(3, 0.5f);
             yield return new WaitForSeconds(1f);
-            VolumeController.Instance.ChangeVignette(1, 1, vignettePosition);
+            // VolumeController.Instance.volumeEffects.ChangeVignette(1, 1, vignettePosition);
             transform.position = newPosition;
-            _doingAction = false;
+            doingAction = false;
             TimeLoopController.Instance.die = false;
             PickableCanvas.Instance.isDie = false;
             TimeLoopController.Instance.SetTime();
-            VolumeController.Instance.ChangeVignette(0);
-            VolumeController.Instance.ChangeColorAdjustments(0);
+            VolumeController.Instance.volumeEffects.ChangeVignette(0);
+            VolumeController.Instance.volumeEffects.ChangeColorAdjustments(0);
             DeactivateRagdoll();
         }
         

@@ -1,7 +1,8 @@
+using System.Collections;
 using Cinemachine;
 using UnityEngine;
 
-namespace Player
+namespace Volume
 {
     public class CinemachineEffects : MonoBehaviour
     {
@@ -29,13 +30,14 @@ namespace Player
         {
             Time.timeScale = scale;
             Time.fixedDeltaTime = _defaultFixedDeltaTime * Time.timeScale;
-            if (duration > 0) Invoke("RestartGameTime", duration);
+            if (duration > 0) StartCoroutine(RestartGameTime());
         }
         
-        private void RestartGameTime()
+        IEnumerator RestartGameTime()
         {
             Time.timeScale = _defaultTimeScale;
             Time.fixedDeltaTime = _defaultFixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
         
         private void Update()
